@@ -1,0 +1,51 @@
+import { r as __exportAll } from "../_runtime.mjs";
+import { t as __exportAll$1 } from "./rolldown-runtime-D8jQpDG7.mjs";
+import { t as supabase } from "./client-DDYNpkNy.mjs";
+// node_modules/.nitro/vite/services/ssr/assets/audit-CrMRURCU.js
+var audit_CrMRURCU_exports = /* @__PURE__ */ __exportAll({ t: () => audit_exports });
+var audit_exports = /* @__PURE__ */ __exportAll$1({ logAudit: () => logAudit });
+/** Best-effort UA parse. Kept small; no external deps. */
+function detectDevice(ua) {
+	const lower = ua.toLowerCase();
+	const browser = /edg\//i.test(ua) ? "Edge" : /chrome|crios/i.test(ua) && !/opr|opera/i.test(lower) ? "Chrome" : /firefox|fxios/i.test(ua) ? "Firefox" : /safari/i.test(ua) ? "Safari" : "Unknown";
+	const os = /windows/i.test(ua) ? "Windows" : /mac os/i.test(ua) ? "macOS" : /android/i.test(ua) ? "Android" : /iphone|ipad|ios/i.test(ua) ? "iOS" : /linux/i.test(ua) ? "Linux" : "Unknown";
+	return {
+		browser,
+		device: /mobile|android|iphone/i.test(ua) ? "mobile" : "desktop",
+		os
+	};
+}
+/**
+* Insert an immutable audit log entry.
+* IP address is best resolved server-side; we attach a client hint only.
+*/
+async function logAudit(payload) {
+	const toJson = (v) => v === void 0 ? null : JSON.parse(JSON.stringify(v));
+	try {
+		const { data: sess } = await supabase.auth.getUser();
+		const user = sess.user;
+		if (!user) return;
+		const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+		const { browser, device, os } = detectDevice(ua);
+		await supabase.from("audit_logs").insert({
+			actor_id: user.id,
+			actor_email: user.email ?? null,
+			action: payload.action,
+			resource_type: payload.resource_type,
+			resource_id: payload.resource_id ?? null,
+			metadata: {
+				browser,
+				device,
+				os,
+				user_agent: ua,
+				timezone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+				affected_user: payload.affected_user ?? null,
+				before: toJson(payload.before),
+				after: toJson(payload.after),
+				...payload.extra ?? {}
+			},
+			ip_address: null
+		});
+	} catch {}
+}
+export { logAudit as n, audit_CrMRURCU_exports as t };
